@@ -1,0 +1,143 @@
+module uart_tx(
+    input        clk,
+    input        reset,
+    input        baud_tick,
+    input        tx_start,
+    input  [7:0] data_in,
+
+    output reg   tx,
+    output reg   tx_busy,
+    output reg   tx_done
+);
+
+reg [7:0] data_reg;
+reg       parity_bit;
+reg [3:0] bit_count;
+
+reg [2:0] state;
+
+parameter IDLE   = 3'd0;
+parameter START  = 3'd1;
+parameter DATA   = 3'd2;
+parameter PARITY = 3'd3;
+parameter STOP   = 3'd4;
+
+
+always @(posedge clk or posedge reset) begin
+
+    if (reset) begin
+
+        tx         <= 1'b1;
+        tx_busy    <= 1'b0;
+        tx_done    <= 1'b0;
+
+        data_reg   <= 8'd0;
+        parity_bit <= 1'b0;
+        bit_count  <= 4'd0;
+
+        state      <= IDLE;
+
+    end
+
+    else begin
+
+        tx_done <= 1'b0;
+
+        case (state)
+
+            IDLE: begin
+
+                tx      <= 1'b1;
+                tx_busy <= 1'b0;
+
+                if (tx_start) begin
+
+                    data_reg   <= data_in;
+                    parity_bit <= ^data_in;
+                    bit_count  <= 4'd0;
+
+                    tx_busy <= 1'b1;
+
+                    state <= START;
+
+                end
+
+            end
+
+
+            START: begin
+
+                tx <= 1'b0;
+
+                if (baud_tick) begin
+                    state <= DATA;
+                end
+
+            end
+
+
+            DATA: begin
+
+                tx <= data_reg[bit_count];
+
+                if (baud_tick) begin
+
+                    if (bit_count == 4'd7) begin
+
+                        bit_count <= 4'd0;
+                        state <= PARITY;
+
+                    end
+
+                    else begin
+
+                        bit_count <= bit_count + 1'b1;
+
+                    end
+
+                end
+
+            end
+
+
+            PARITY: begin
+
+                tx <= parity_bit;
+
+                if (baud_tick) begin
+                    state <= STOP;
+                end
+
+            end
+
+
+            STOP: begin
+
+                tx <= 1'b1;
+
+                if (baud_tick) begin
+
+                    tx_busy <= 1'b0;
+                    tx_done <= 1'b1;
+
+                    state <= IDLE;
+
+                end
+
+            end
+
+
+            default: begin
+
+                state <= IDLE;
+                tx <= 1'b1;
+                tx_busy <= 1'b0;
+
+            end
+
+        endcase
+
+    end
+
+end
+endmodule
