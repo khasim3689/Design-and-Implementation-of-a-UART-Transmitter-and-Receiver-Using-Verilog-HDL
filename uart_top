@@ -1,0 +1,117 @@
+module uart_top #(
+    parameter CLKS_PER_BIT = 16
+)(
+    input        clk,
+    input        reset,
+
+    input        tx_start,
+    input  [7:0] data_in,
+
+    output       tx,
+
+    output [7:0] data_out,
+
+    output       tx_busy,
+    output       tx_done,
+    output       rx_done,
+
+    output       parity_error,
+    output       frame_error,
+
+    output [6:0] seg_high,
+    output [6:0] seg_low
+);
+
+wire baud_tick;
+
+wire received_parity;
+
+
+// ------------------------------------
+// BAUD GENERATOR
+// ------------------------------------
+
+baud_generator #(
+    .CLKS_PER_BIT(CLKS_PER_BIT)
+)
+baud_gen_inst (
+
+    .clk(clk),
+    .reset(reset),
+    .baud_tick(baud_tick)
+
+);
+
+
+// ------------------------------------
+// UART TRANSMITTER
+// ------------------------------------
+
+uart_tx tx_inst (
+
+    .clk(clk),
+    .reset(reset),
+    .baud_tick(baud_tick),
+
+    .tx_start(tx_start),
+    .data_in(data_in),
+
+    .tx(tx),
+    .tx_busy(tx_busy),
+    .tx_done(tx_done)
+
+);
+
+
+// ------------------------------------
+// UART RECEIVER
+// ------------------------------------
+
+uart_rx #(
+    .CLKS_PER_BIT(CLKS_PER_BIT)
+)
+rx_inst (
+
+    .clk(clk),
+    .reset(reset),
+    .baud_tick(baud_tick),
+
+    .rx(tx),
+
+    .data_out(data_out),
+    .received_parity(received_parity),
+
+    .rx_done(rx_done),
+    .frame_error(frame_error)
+
+);
+
+
+// ------------------------------------
+// PARITY CHECKER
+// ------------------------------------
+
+parity_checker parity_inst (
+
+    .data_in(data_out),
+    .received_parity(received_parity),
+
+    .parity_error(parity_error)
+
+);
+
+
+// ------------------------------------
+// 7-SEGMENT DISPLAY
+// ------------------------------------
+
+display_controller display_inst (
+
+    .data_in(data_out),
+
+    .seg_high(seg_high),
+    .seg_low(seg_low)
+
+);
+
+endmodule
