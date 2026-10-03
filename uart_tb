@@ -1,0 +1,157 @@
+module uart_tb;
+
+reg clk;
+reg reset;
+
+reg tx_start;
+reg [7:0] data_in;
+
+wire tx;
+
+wire [7:0] data_out;
+
+wire tx_busy;
+wire tx_done;
+wire rx_done;
+
+wire parity_error;
+wire frame_error;
+
+wire [6:0] seg_high;
+wire [6:0] seg_low;
+
+
+// ------------------------------------
+// DUT
+// ------------------------------------
+
+uart_top #(
+    .CLKS_PER_BIT(16)
+)
+DUT (
+
+    .clk(clk),
+    .reset(reset),
+
+    .tx_start(tx_start),
+    .data_in(data_in),
+
+    .tx(tx),
+
+    .data_out(data_out),
+
+    .tx_busy(tx_busy),
+    .tx_done(tx_done),
+    .rx_done(rx_done),
+
+    .parity_error(parity_error),
+    .frame_error(frame_error),
+
+    .seg_high(seg_high),
+    .seg_low(seg_low)
+
+);
+
+
+// ------------------------------------
+// CLOCK
+// ------------------------------------
+
+initial begin
+    clk = 1'b0;
+end
+
+always #5 clk = ~clk;
+
+
+// ------------------------------------
+// TEST
+// ------------------------------------
+
+initial begin
+
+    // Initial values
+
+    reset    = 1'b1;
+    tx_start = 1'b0;
+    data_in  = 8'h00;
+
+
+    // Reset
+
+    #50;
+
+    reset = 1'b0;
+
+
+    // ==================================
+    // TEST 1 : A5
+    // ==================================
+
+    #50;
+
+    data_in  = 8'hA5;
+    tx_start = 1'b1;
+
+    #10;
+
+    tx_start = 1'b0;
+
+    wait(tx_done);
+
+    #100;
+
+
+    // ==================================
+    // TEST 2 : 3C
+    // ==================================
+
+    data_in  = 8'h3C;
+    tx_start = 1'b1;
+
+    #10;
+
+    tx_start = 1'b0;
+
+    wait(tx_done);
+
+    #100;
+
+
+    // ==================================
+    // TEST 3 : 55
+    // ==================================
+
+    data_in  = 8'h55;
+    tx_start = 1'b1;
+
+    #10;
+
+    tx_start = 1'b0;
+
+    wait(tx_done);
+
+    #100;
+
+
+    // ==================================
+    // TEST 4 : F0
+    // ==================================
+
+    data_in  = 8'hF0;
+    tx_start = 1'b1;
+
+    #10;
+
+    tx_start = 1'b0;
+
+    wait(tx_done);
+
+    #100;
+
+
+    $finish;
+
+end
+
+endmodule
